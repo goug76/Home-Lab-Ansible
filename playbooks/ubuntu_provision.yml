@@ -36,7 +36,7 @@
     - name: Allow all incoming local traffic
       ufw:
         rule: allow
-        direction : incoming
+        direction : in
         src: "{{subnet}}"
 
     - name: Allow OpenSSH traffic
