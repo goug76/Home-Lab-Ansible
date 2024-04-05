@@ -1,0 +1,58 @@
+---
+- name: Ubuntu Provisioning
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install required system packages
+      ansible.builtin.apt:
+        pkg:
+          - qemu-guest-agent
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+          - gnupg
+          - acl
+          - whois
+        state: latest
+        update_cache: true
+
+    - name: Deny all incoming traffic
+      ufw:
+        default: deny
+        direction : incoming
+        policy: deny
+
+    - name: Allow all outgoing traffic
+      ufw:
+        default: allow
+        direction : outgoing
+        policy: allow
+
+    - name: Allow all incoming local traffic
+      ufw:
+        rule: allow
+        direction : incoming
+        src: {{subnet}}
+
+    - name: Allow OpenSSH traffic
+      ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: Enable UFW Firewall
+      ufw:
+        state: enabled
+
+    - name: Check if reboot required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+
+    - name: Reboot if required
+      ansible.builtin.reboot:
+      when: reboot_required_file.stat.exists == true

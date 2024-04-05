@@ -7,17 +7,6 @@
     - name: Install required system packages
       ansible.builtin.apt:
         pkg:
-          - qemu-guest-agent
-          - apt-transport-https
-          - ca-certificates
-          - curl
-          - software-properties-common
-          - python3-pip
-          - virtualenv
-          - python3-setuptools
-          - gnupg
-          - acl
-          - whois
           - git
         state: latest
         update_cache: true
