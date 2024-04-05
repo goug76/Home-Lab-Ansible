@@ -60,7 +60,7 @@
 
     - name: Clone the Docker Repository
       ansible.builtin.git:
-        repo: https://github.com/goug76/docker.git
+        repo: https://github.com/{{ user }}/docker.git
         dest: /home/{{ user }}/
         single_branch: yes
         version: main
@@ -77,7 +77,7 @@
 
     - name: Add the GIT Repository Token
       ansible.builtin.shell:
-        cmd: git remote set-url origin https://{{token}}@github.com/{{ user }}/docker
+        cmd: git remote set-url origin https://{{git_token}}@github.com/{{ user }}/docker
         chdir: /home/{{ user }}/docker
 
     - name: Check if reboot required
