@@ -25,13 +25,11 @@
       ufw:
         default: deny
         direction : incoming
-        policy: deny
 
     - name: Allow all outgoing traffic
       ufw:
         default: allow
         direction : outgoing
-        policy: allow
 
     - name: Allow all incoming local traffic
       ufw:
