@@ -50,7 +50,7 @@
     - name: Clone the Docker Repository
       ansible.builtin.git:
         repo: "{{repo}}"
-        depth : "{{home_dir}}"
+        dest: "{{home_dir}}"
         single_branch: yes
         version: main
 
