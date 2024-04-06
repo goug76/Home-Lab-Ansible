@@ -49,29 +49,28 @@
 
     - name: Clone the Docker Repository
       ansible.builtin.git:
-        repo: https://github.com/"{{user}}"/docker.git
-        dest: /home/"{{user}}"/
+        repo: "{{repo}}"
         single_branch: yes
         version: main
 
     - name: Make the initialization script executable
       ansible.builtin.shell:
         cmd: chmod 700 initialization.sh
-        chdir: /home/"{{ user }}"/docker
+        chdir: docker/
 
     - name: Execute initialization script
       ansible.builtin.shell: initialization.sh >> logs/initialization.log
       args:
-        chdir: /home/"{{ user }}"/docker
+        chdir: docker/
 
     - name: Add the GIT Repository Token
       ansible.builtin.shell:
-        cmd: git remote set-url origin https://"{{git_token}}"@github.com/"{{ user }}"/docker
-        chdir: /home/"{{ user }}"/docker
+        cmd: "{{git_token}}"
+        chdir: docker/
 
     - name: Check if reboot required
       ansible.builtin.stat:
-        path: /var/run/reboot-required
+      path: /var/run/reboot-required
       register: reboot_required_file
 
     - name: Reboot if required
