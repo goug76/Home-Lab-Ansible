@@ -70,11 +70,6 @@
         cmd: "{{git_token}}"
         chdir: /home/goug76/docker/
 
-    - name: Check if reboot required
-      ansible.builtin.stat:
-        path: /var/run/reboot-required
-      register: reboot_required_file
-
-    - name: Reboot if required
-      ansible.builtin.reboot:
-      when: reboot_required_file.stat.exists == true
+    - name: Add the GIT Repository Token
+      ansible.builtin.shell:
+        cmd: "{{git_token}}"
