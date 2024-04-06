@@ -61,8 +61,9 @@
         chdir: /home/goug76/docker/
 
     - name: Execute initialization script
-      ansible.builtin.script: 
-        cmd: /home/goug76/docker/initialization.sh
+      ansible.builtin.shell:
+        cmd: bash initialization.sh
+        chdir: /home/goug76/docker/
 
     - name: Add the GIT Repository Token
       ansible.builtin.shell:
