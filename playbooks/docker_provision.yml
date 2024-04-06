@@ -53,6 +53,7 @@
         dest: "{{home_dir}}"
         single_branch: yes
         version: main
+        force: true
 
     - name: Make the initialization script executable
       ansible.builtin.shell:
