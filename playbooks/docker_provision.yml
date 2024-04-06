@@ -50,7 +50,7 @@
     - name: Clone the Docker Repository
       ansible.builtin.git:
         repo: https://github.com/"{{user}}"/docker.git
-        dest: /home/"{{user}"/
+        dest: /home/"{{user}}"/
         single_branch: yes
         version: main
 
