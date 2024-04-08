@@ -1,0 +1,12 @@
+---
+- name: Pull Docker Repository
+  hosts: all
+
+  tasks:
+    - name: Pull from GIT
+      ansible.builtin.git:
+        repo: "{{repo}}"
+        dest: "{{docker_dir}}"
+        update: yes
+        version: main
+        force: true
