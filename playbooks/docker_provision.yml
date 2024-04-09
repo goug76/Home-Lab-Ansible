@@ -62,3 +62,8 @@
       ansible.builtin.shell:
         cmd: "{{git_token}}"
         chdir: "{{docker_dir}}"
+
+    - name: Trust Docker root directory
+      ansible.builtin.shell:
+        cmd: git config --global --add safe.directory "{{docker_dir}}"
+        chdir: "{{docker_dir}}"
