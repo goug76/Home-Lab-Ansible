@@ -17,6 +17,7 @@
           - gnupg
           - acl
           - whois
+          - apache2-utils
         state: latest
         update_cache: true
 
