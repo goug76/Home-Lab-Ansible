@@ -24,7 +24,7 @@
       ansible.builtin.file:
         path: "{{bit_dic}}"
         state: directory
-        mode: /opt/bitwarden
+        mode: '0700'
 
     - name: Recursively change ownership of a directory
       ansible.builtin.file:
