@@ -1,0 +1,35 @@
+---
+- name: Bitwarden Provisioning
+  hosts: all
+  become: true
+
+  tasks:
+    - name: create bitwarden user
+      ansible.builtin.user:
+        name: "{{bit_user}}"
+        password: "{{pwd}}"
+        groups: sudo, docker
+        state: present
+        shell: /bin/bash
+        system: no
+        createhome: yes
+        home: /home/"{{bit_user}}"
+    
+    - name: add ssh key
+      ansible.posix.authorized_key:
+        user: "{{bit_user}}"
+        key: "{{ssh_key}}"
+
+    - name: Create a directory if it does not exist
+      ansible.builtin.file:
+        path: "{{bit_dic}}"
+        state: directory
+        mode: /opt/bitwarden
+
+    - name: Recursively change ownership of a directory
+      ansible.builtin.file:
+        path: "{{bit_dic}}"
+        state: directory
+        recurse: yes
+        owner: "{{bit_user}}"
+        group: "{{bit_user}}"
