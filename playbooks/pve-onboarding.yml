@@ -98,6 +98,10 @@
         replace: "false"
         backup: yes
 
+    - name: turn off screen after 1 minute of inactivity
+      ansible.builtin.shell:
+        cmd: echo -ne "\033[9;1]" > /dev/tty1
+
     - name: Check if reboot required
       ansible.builtin.stat:
         path: /var/run/reboot-required
