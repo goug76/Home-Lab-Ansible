@@ -91,12 +91,12 @@
         - line: 'vfio_pci'
         - line: 'vfio_virqfd'
         
-  - name: remove nag message
-    replace:
-      path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
-      regexp: "res === null \\|\\| res === undefined \\|\\| \\!res \\|\\| res\\n\\t\\t\\t.data.status.toLowerCase\\(\\) \\!== 'active'"
-      replace: "false"
-      backup: yes
+    - name: remove nag message
+      ansible.builtin.replace:
+        path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+        regexp: "res === null \\|\\| res === undefined \\|\\| \\!res \\|\\| res\\n\\t\\t\\t.data.status.toLowerCase\\(\\) \\!== 'active'"
+        replace: "false"
+        backup: yes
 
     - name: Check if reboot required
       ansible.builtin.stat:
