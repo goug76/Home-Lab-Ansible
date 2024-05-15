@@ -56,7 +56,7 @@
         shell: /bin/bash
         system: no
         createhome: yes
-        home: /home/"{{user}}"
+        home: /home/{{user}}
     
     - name: add ssh key root
       ansible.posix.authorized_key:
