@@ -1,0 +1,13 @@
+---
+- name: Remove "No valid subscription" popup on login to webgui
+#  hosts: vm
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: remove nag message
+      replace:
+        path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+        regexp: "res === null \\|\\| res === undefined \\|\\| \\!res \\|\\| res\\n\\t\\t\\t.data.status.toLowerCase\\(\\) \\!== 'active'"
+        replace: "false"
+        backup: yes
