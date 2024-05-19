@@ -42,16 +42,16 @@
         password: "{{ pwd }}"
         update_password: always
     
-   - name: Enable Root Login
-     ansible.builtin.lineinfile:
-        dest: /etc/ssh/sshd_config
-        regexp: '^PermitRootLogin'
-        line: "PermitRootLogin yes"
-        state: present
-        backup: yes
-     become: yes
-     notify:
-       - restart ssh
+    - name: Enable Root Login
+      ansible.builtin.lineinfile:
+          dest: /etc/ssh/sshd_config
+          regexp: '^PermitRootLogin'
+          line: "PermitRootLogin yes"
+          state: present
+          backup: yes
+      become: yes
+      notify:
+        - restart ssh
 
     - name: Deny all incoming traffic
       ufw:
