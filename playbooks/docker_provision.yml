@@ -67,4 +67,4 @@
       ansible.builtin.shell:
         cmd: git config --global --add safe.directory "{{docker_dir}}"
         chdir: "{{docker_dir}}"
-        become: false
+      become: false
