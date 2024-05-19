@@ -90,8 +90,8 @@
       ansible.builtin.reboot:
       when: reboot_required_file.stat.exists == true  
 
-   handlers:
-    - name: restart ssh
-      systemctl:
-        name: sshd
-        state: restarted
+    handlers:
+      - name: restart ssh
+        service:
+          name: sshd
+          state: restarted
