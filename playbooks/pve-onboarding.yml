@@ -39,17 +39,17 @@
     - name: Download Step-CLI
       ansible.builtin.get_url:
         url: https://dl.smallstep.com/cli/docs-cli-install/latest/step-cli_amd64.deb
-        dest: "{{home_dir}}"
+        dest: /root
 
     - name: Install Step-CLI
       ansible.builtin.shell:
         cmd: sudo dpkg -i step-cli_amd64.deb
-        chdir: "{{home_dir}}"
+        chdir: /root
 
     - name: Install RootCA
       ansible.builtin.shell:
         cmd: "{{root_ca}}"
-        chdir: "{{home_dir}}"
+        chdir: /root
     
     - name: Remove useless packages from the cache
       ansible.builtin.apt:
