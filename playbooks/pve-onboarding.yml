@@ -3,19 +3,17 @@
   hosts: all
 
   tasks:
-    - name: Remove Proxmox Enterprise repository
+    - name: Remove Proxmox Enterprise repositories
       ansible.builtin.lineinfile: 
-        path: /etc/apt/sources.list.d/pve-enterprise.list 
+        path: "{{item.path}}" 
         regexp: '^(.*)deb https://enterprise.proxmox.com(.*)$' 
-        line: '#deb https://enterprise.proxmox.com/debian/pve bookworm pve-enterprise'
+        line: "{{item.line}}"
         backrefs: yes
-
-    - name: Remove Proxmox Enterprise Ceph repository
-      ansible.builtin.lineinfile: 
-        path: /etc/apt/sources.list.d/ceph.list 
-        regexp: '^(.*)deb https://enterprise.proxmox.com(.*)$' 
-        line: '#deb https://enterprise.proxmox.com/debian/ceph-quincy bookworm enterprise'
-        backrefs: yes
+      loop:
+        - path: /etc/apt/sources.list.d/pve-enterprise.list
+          line: '#deb https://enterprise.proxmox.com/debian/pve bookworm pve-enterprise'
+        - path: /etc/apt/sources.list.d/ceph.list
+          line: '#deb https://enterprise.proxmox.com/debian/ceph-quincy bookworm enterprise'
 
     - name: Add Proxmox no-subscription repository
       ansible.builtin.lineinfile:

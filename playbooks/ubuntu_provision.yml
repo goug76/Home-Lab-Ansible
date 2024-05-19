@@ -20,6 +20,21 @@
           - apache2-utils
         state: latest
         update_cache: true
+    
+    - name: Download Step-CLI
+      ansible.builtin.get_url:
+        url: https://dl.smallstep.com/cli/docs-cli-install/latest/step-cli_amd64.deb
+        dest: {{home_dir}}
+
+    - name: Install Step-CLI
+      ansible.builtin.shell:
+        cmd: sudo dpkg -i step-cli_amd64.deb
+        chdir: "{{home_dir}}"
+
+    - name: Install RootCA
+      ansible.builtin.shell:
+        cmd: "{{root_ca}}"
+        chdir: "{{home_dir}}"
 
     - name: Deny all incoming traffic
       ufw:
@@ -35,7 +50,10 @@
       ufw:
         rule: allow
         direction : in
-        src: "{{subnet}}"
+        src: "{{item}}"
+      loop:
+        - '172.16.0.0/12'
+        - '192.168.0.0/16'
 
     - name: Allow OpenSSH traffic
       ufw:
