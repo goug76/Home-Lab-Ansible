@@ -98,6 +98,13 @@
         - line: 'vfio_iommu_type1'
         - line: 'vfio_pci'
         - line: 'vfio_virqfd'
+
+    - name: Update GRUB
+      ansible.builtin.shell:
+        cmd: "{{item}}"
+      loop:
+        - update-grub
+        - update-initramfs -u
         
     - name: remove nag message
       ansible.builtin.replace:
@@ -110,13 +117,7 @@
       ansible.builtin.shell:
         cmd: echo -ne "\033[9;1]" > /dev/tty1
 
-    - name: Check if reboot required
-      ansible.builtin.stat:
-        path: /var/run/reboot-required
-      register: reboot_required_file
-
-    - name: Reboot if required
+    - name: Reboot PVE
       ansible.builtin.reboot:
-      when: reboot_required_file.stat.exists == true
 
 # Password can't be plain text so run this command to hash it: mkpasswd --method=sha-512
