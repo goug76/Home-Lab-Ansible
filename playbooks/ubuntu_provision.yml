@@ -36,6 +36,23 @@
         cmd: "{{root_ca}}"
         chdir: "{{home_dir}}"
 
+    - name: Changing root password
+      ansible.builtin.user:
+        name: root
+        password: "{{ pwd }}"
+        update_password: always
+    
+   - name: Enable Root Login
+     ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: "PermitRootLogin yes"
+        state: present
+        backup: yes
+     become: yes
+     notify:
+       - restart ssh
+
     - name: Deny all incoming traffic
       ufw:
         default: deny
@@ -71,4 +88,10 @@
 
     - name: Reboot if required
       ansible.builtin.reboot:
-      when: reboot_required_file.stat.exists == true
+      when: reboot_required_file.stat.exists == true  
+
+   handlers:
+    - name: restart ssh
+      systemctl:
+        name: sshd
+        state: restarted

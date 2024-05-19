@@ -11,9 +11,9 @@
         backrefs: yes
       loop:
         - path: /etc/apt/sources.list.d/pve-enterprise.list
-          line: '#deb https://enterprise.proxmox.com/debian/pve bookworm pve-enterprise'
+          line: '# deb https://enterprise.proxmox.com/debian/pve bookworm pve-enterprise'
         - path: /etc/apt/sources.list.d/ceph.list
-          line: '#deb https://enterprise.proxmox.com/debian/ceph-quincy bookworm enterprise'
+          line: '# deb https://enterprise.proxmox.com/debian/ceph-quincy bookworm enterprise'
 
     - name: Add Proxmox no-subscription repository
       ansible.builtin.lineinfile:
@@ -36,6 +36,21 @@
         cache_valid_time: 3600
         state: latest
     
+    - name: Download Step-CLI
+      ansible.builtin.get_url:
+        url: https://dl.smallstep.com/cli/docs-cli-install/latest/step-cli_amd64.deb
+        dest: "{{home_dir}}"
+
+    - name: Install Step-CLI
+      ansible.builtin.shell:
+        cmd: sudo dpkg -i step-cli_amd64.deb
+        chdir: "{{home_dir}}"
+
+    - name: Install RootCA
+      ansible.builtin.shell:
+        cmd: "{{root_ca}}"
+        chdir: "{{home_dir}}"
+    
     - name: Remove useless packages from the cache
       ansible.builtin.apt:
         autoclean: yes
@@ -55,11 +70,6 @@
         system: no
         createhome: yes
         home: /home/{{user}}
-    
-    - name: add ssh key root
-      ansible.posix.authorized_key:
-        user: "root"
-        key: "{{ssh_key}}"
     
     - name: add ssh key
       ansible.posix.authorized_key:
