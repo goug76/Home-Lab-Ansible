@@ -32,6 +32,7 @@
           - sudo
           - python3-proxmoxer
           - python3-requests
+          - lshw
         update_cache: no
         cache_valid_time: 3600
         state: latest
@@ -113,11 +114,11 @@
         replace: "false"
         backup: yes
 
+    - name: Reboot PVE
+      ansible.builtin.reboot:
+
     - name: turn off screen after 1 minute of inactivity
       ansible.builtin.shell:
         cmd: echo -ne "\033[9;1]" > /dev/tty1
-
-    - name: Reboot PVE
-      ansible.builtin.reboot:
 
 # Password can't be plain text so run this command to hash it: mkpasswd --method=sha-512
