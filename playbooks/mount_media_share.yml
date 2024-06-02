@@ -1,0 +1,21 @@
+---
+- name: Mount Docker Share
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install required system packages
+      ansible.builtin.apt:
+        pkg:
+          - cifs-utils
+        update_cache: no
+        cache_valid_time: 3600
+        state: latest
+
+    - name: Mount Docker Backup Share
+      ansible.posix.mount:
+        src: "{{ docker_share }}"
+        path: /mnt/media
+        opts: "rw,vers=3,file_mode=0600,dir_mode=0777,username={{ user }},password={{ password }}"
+        fstype: cifs
+        state: mounted
