@@ -18,6 +18,8 @@
           - acl
           - whois
           - apache2-utils
+          - cifs-utils
+          - linux-generic
         state: latest
         update_cache: true
     
