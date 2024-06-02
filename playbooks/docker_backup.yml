@@ -12,7 +12,7 @@
         cache_valid_time: 3600
         state: latest
 
-    - name: Create a bz2 archive of multiple files, rooted at /path
+    - name: Zip Docker Files for Backup
       community.general.archive:
         path:
           - "{{docker_dir}}appdata"
