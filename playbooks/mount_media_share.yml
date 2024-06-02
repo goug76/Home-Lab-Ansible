@@ -14,7 +14,7 @@
 
     - name: Mount Docker Backup Share
       ansible.posix.mount:
-        src: "{{ docker_share }}"
+        src: "{{ media_share }}"
         path: /mnt/media
         opts: "rw,vers=3,file_mode=0600,dir_mode=0777,username={{ user }},password={{ password }}"
         fstype: cifs
