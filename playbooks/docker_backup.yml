@@ -1,9 +1,17 @@
 ---
-- name: Mount Docker Share
+- name: Docker Backup
   hosts: all
   become: true
 
   tasks:
+    - name: Install required system packages
+      ansible.builtin.apt:
+        pkg:
+          - unzip
+        update_cache: no
+        cache_valid_time: 3600
+        state: latest
+
     - name: Create a bz2 archive of multiple files, rooted at /path
       community.general.archive:
         path:
