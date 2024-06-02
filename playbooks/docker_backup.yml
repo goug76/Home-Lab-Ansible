@@ -1,0 +1,13 @@
+---
+- name: Mount Docker Share
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create a bz2 archive of multiple files, rooted at /path
+      community.general.archive:
+        path:
+          - "{{docker_dir}}appdata"
+          - "{{docker_dir}}.env"
+        dest: '/mnt/docker/{{ ansible_hostname | lower }}_backup.zip'
+        format: zip
