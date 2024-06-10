@@ -16,6 +16,6 @@
       ansible.posix.mount:
         src: "{{ docker_share }}"
         path: /mnt/docker
-        opts: "rw,vers=3,file_mode=0600,dir_mode=0777,username={{ user }},password={{ password }}"
+        opts: "rw,vers=3,file_mode=0700,dir_mode=0777,username={{ user }},password={{ password }}"
         fstype: cifs
         state: mounted

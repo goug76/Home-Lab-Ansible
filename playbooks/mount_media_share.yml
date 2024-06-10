@@ -16,6 +16,6 @@
       ansible.posix.mount:
         src: "{{ media_share }}"
         path: /mnt/multimedia
-        opts: "rw,vers=3,file_mode=0600,dir_mode=0777,username={{ user }},password={{ password }}"
+        opts: "rw,vers=3,file_mode=0777,dir_mode=0777,username={{ user }},password={{ password }}"
         fstype: cifs
         state: mounted
