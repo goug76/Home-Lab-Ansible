@@ -1,0 +1,24 @@
+---
+- name: Plex Backup
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install required system packages
+      ansible.builtin.apt:
+        pkg:
+          - unzip
+        update_cache: no
+        cache_valid_time: 3600
+        state: latest
+
+    - name: Zip Docker Files for Backup
+      community.general.archive:
+        path:
+          - "{{docker_dir}}appdata/plex"
+          - "{{docker_dir}}appdata/overseerr"
+          - "{{docker_dir}}appdata/prowlarr"
+          - "{{docker_dir}}appdata/radarr"
+          - "{{docker_dir}}appdata/sonarr"
+        dest: '/mnt/docker/{{ ansible_hostname | lower }}_backup.zip'
+        format: zip
