@@ -19,5 +19,5 @@
           - "{{docker_dir}}.env"
         dest: '/mnt/docker/{{ ansible_hostname | lower }}_backup.zip'
         exclude_path:
-          - "{{docker_dir}}appdata/qbittorrent/qBittorrent/ipc-socket"
+          - "{{docker_dir}}appdata/qbittorrent"
         format: zip
