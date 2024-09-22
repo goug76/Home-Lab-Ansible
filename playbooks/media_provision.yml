@@ -5,16 +5,14 @@
 
   tasks:
 
-    - name: Create network manager file for Cockpit
-      ansible.builtin.file:
-        path: /etc/NetworkManager/conf.d/10-globally-managed-devices.conf
-        state: touch
-
-    - name: Add content to the network manager file
-      ansible.builtin.lineinfile:
-        path: /etc/NetworkManager/conf.d/10-globally-managed-devices.conf
-        line: "{{ item.line }}"
+    - name: Add a dummy netowrk interface (Cockpit)
+      community.general.nmcli:
+        type: dummy
+        conn_name: fake
+        ifname: fake0
+        ip4: 1.2.3.4/24
+        gw4: 1.2.3.1
         state: present
-      loop:
-        - line: '[keyfile]'
-        - line: 'unmanaged-devices=none'
+
+    - name: Reboot if required
+      ansible.builtin.reboot:
