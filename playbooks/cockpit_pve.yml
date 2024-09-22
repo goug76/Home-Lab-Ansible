@@ -7,7 +7,6 @@
     - name: Install Cockpit on PVE
       ansible.builtin.apt:
         name: cockpit
-        default_release: bullseye-backports
         install_recommends: false
 
     - name: Enable Cockpit
