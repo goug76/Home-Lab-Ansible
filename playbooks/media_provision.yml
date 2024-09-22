@@ -17,7 +17,7 @@
       ansible.builtin.apt:
         autoremove: yes
         purge: true
-        
+
     - name: Add Docker GPG apt Key
       ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
@@ -99,15 +99,13 @@
         - '172.16.0.0/12'
         - '192.168.0.0/16'
 
-    - name: Allow OpenSSH traffic
+    - name: Allow OpenSSH and Samba traffic
       ufw:
         rule: allow
-        name: OpenSSH
-
-    - name: Allow Samba traffic
-      ufw:
-        rule: allow
-        name: samba
+        name: '{{ item }}'
+      loop:
+        - OpenSSH
+        - samba
 
     - name: Enable UFW Firewall
       ufw:
@@ -153,7 +151,7 @@
 
     - name: Enable Cockpit
       ansible.builtin.systemd_service:
-        name: cockpit cokpit.socket
+        name: cockpit cockpit.socket
         state: started
         enabled: true
 
