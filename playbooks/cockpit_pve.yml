@@ -4,16 +4,10 @@
   become: true
 
   tasks:
-    - name: Add Docker Repository
-      ansible.builtin.apt_repository:
-        repo: ppa:cockpit-project/cockpit
-        state: present
-
     - name: Install Cockpit
       ansible.builtin.apt:
         pkg:
           - cockpit
-          - cockpit-docker
         state: latest
         update_cache: true
 
