@@ -4,17 +4,17 @@
   become: true
 
   tasks:
-    - name: Enable Cockpit
-      ansible.builtin.systemd_service:
-        name: cockpit.socket
-        state: started
-        enabled: true
 
-    - name: Check if reboot required
-      ansible.builtin.stat:
-        path: /var/run/reboot-required
-      register: reboot_required_file
+    - name: Create network manager file for Cockpit
+      ansible.builtin.file:
+        path: /etc/NetworkManager/conf.d/10-globally-managed-devices.conf
+        state: touch
 
-    - name: Reboot if required
-      ansible.builtin.reboot:
-      when: reboot_required_file.stat.exists == true 
+    - name: Add content to the network manager file
+      ansible.builtin.lineinfile:
+        path: /etc/NetworkManager/conf.d/10-globally-managed-devices.conf
+        line: "{{ item.line }}"
+        state: present
+      loop:
+        - line: '[keyfile]'
+        - line: 'unmanaged-devices=none'
