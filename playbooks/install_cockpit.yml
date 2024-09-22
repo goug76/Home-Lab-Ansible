@@ -1,5 +1,5 @@
 ---
-- name: Cockpit on PVE
+- name: Install Cockpit
   hosts: all
   become: true
 
