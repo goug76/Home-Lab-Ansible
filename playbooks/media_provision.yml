@@ -1,0 +1,143 @@
+---
+- name: Media Provisioning
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Add Docker GPG apt Key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      ansible.builtin.apt_repository:
+        repo: deb https://download.docker.com/{{ansible_system | lower}}/{{ansible_distribution | lower}} {{ ansible_distribution_release | lower }} stable
+        state: present
+
+    - name: Install required system packages
+      ansible.builtin.apt:
+        pkg:
+          - cockpit
+          - samba
+          - apt-transport-https
+          - ca-certificates
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+          - gnupg
+          - acl
+          - whois
+          - apache2-utils
+          - cifs-utils
+          - linux-generic
+          - unzip
+          - zip
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: latest
+        update_cache: true
+    
+    - name: Download Step-CLI
+      ansible.builtin.get_url:
+        url: https://dl.smallstep.com/cli/docs-cli-install/latest/step-cli_amd64.deb
+        dest: "{{home_dir}}"
+
+    - name: Install Step-CLI
+      ansible.builtin.shell:
+        cmd: sudo dpkg -i step-cli_amd64.deb
+        chdir: "{{home_dir}}"
+
+    - name: Install RootCA
+      ansible.builtin.shell:
+        cmd: "{{root_ca}}"
+        chdir: "{{home_dir}}"
+
+    - name: Deny all incoming traffic
+      ufw:
+        default: deny
+        direction : incoming
+
+    - name: Allow all outgoing traffic
+      ufw:
+        default: allow
+        direction : outgoing
+
+    - name: Allow all incoming local traffic
+      ufw:
+        rule: allow
+        direction : in
+        src: "{{item}}"
+      loop:
+        - '172.16.0.0/12'
+        - '192.168.0.0/16'
+
+    - name: Allow OpenSSH traffic
+      ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: Allow Samba traffic
+      ufw:
+        rule: allow
+        name: samba
+
+    - name: Enable UFW Firewall
+      ufw:
+        state: enabled
+
+    - name: Install Docker Module for Python
+      ansible.builtin.pip:
+        name: docker
+
+    - name: Add Docker group
+      ansible.builtin.group:
+        name: docker
+        state: present
+
+    - name: Add user to Docker group
+      ansible.builtin.user:
+        name: "{{ user }}"
+        groups: docker
+        append: true
+
+    - name: Clone the Docker Repository
+      ansible.builtin.git:
+        repo: "{{repo}}"
+        dest: "{{docker_dir}}"
+        single_branch: yes
+        version: main
+        force: true
+
+    - name: Make the initialization script executable
+      ansible.builtin.shell:
+        cmd: chmod 700 initialization.sh
+        chdir: "{{docker_dir}}"
+
+    - name: Execute initialization script
+      ansible.builtin.shell:
+        cmd: bash initialization.sh
+        chdir: "{{docker_dir}}"
+
+    - name: Add the GIT Repository Token
+      ansible.builtin.shell:
+        cmd: "{{git_token}}"
+        chdir: "{{docker_dir}}"
+
+    - name: Enable Cockpit
+      ansible.builtin.systemd_service:
+        name: cockpit cokpit.socket
+        state: started
+        enabled: true
+
+    - name: Check if reboot required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+
+    - name: Reboot if required
+      ansible.builtin.reboot:
+      when: reboot_required_file.stat.exists == true 
