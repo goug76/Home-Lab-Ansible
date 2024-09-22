@@ -4,15 +4,11 @@
   become: true
 
   tasks:
-
-    - name: Add a dummy netowrk interface (Cockpit)
-      community.general.nmcli:
-        type: dummy
-        conn_name: fake
-        ifname: fake0
-        ip4: 1.2.3.4/24
-        gw4: 1.2.3.1
-        state: present
-
-    - name: Reboot if required
-      ansible.builtin.reboot:
+    
+    - name: Add Cockpit modules
+      ansible.builtin.apt:
+        deb: "{{ item.url }}"
+      loop:
+        - url: https://github.com/45Drives/cockpit-file-sharing/releases/download/v3.3.7/cockpit-file-sharing_3.3.7-1focal_all.deb
+        - url: https://github.com/45Drives/cockpit-identities/releases/download/v0.1.12/cockpit-identities_0.1.12-1focal_all.deb
+        - url: https://github.com/45Drives/cockpit-navigator/releases/download/v0.5.10/cockpit-navigator_0.5.10-1focal_all.deb
