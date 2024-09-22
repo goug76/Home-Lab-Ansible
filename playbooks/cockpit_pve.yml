@@ -4,11 +4,11 @@
   become: true
 
   tasks:
-    - name: Install Docker-ce
+    - name: Install Cockpit
       ansible.builtin.apt:
         pkg:
           - cockpit
-          - cockpit-docker 
+          - cockpit-podman
         state: latest
         update_cache: true
 
