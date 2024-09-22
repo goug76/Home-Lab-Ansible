@@ -4,6 +4,20 @@
   become: true
 
   tasks:
+    - name: upgrade apt packages
+      ansible.builtin.apt:
+        upgrade: yes
+        update_cache: yes
+    
+    - name: Remove useless packages from the cache
+      ansible.builtin.apt:
+        autoclean: yes
+        
+    - name: Remove dependencies that are no longer required and purge their configuration files
+      ansible.builtin.apt:
+        autoremove: yes
+        purge: true
+        
     - name: Add Docker GPG apt Key
       ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
@@ -40,6 +54,16 @@
           - docker-compose-plugin
         state: latest
         update_cache: true
+    
+    - name: add ssh key
+      ansible.posix.authorized_key:
+        user: "{{user}}"
+        key: "{{ssh_key}}"
+    
+    - name: add Ansible ssh key
+      ansible.posix.authorized_key:
+        user: "{{user}}"
+        key: "{{ansible_key}}"
     
     - name: Download Step-CLI
       ansible.builtin.get_url:
