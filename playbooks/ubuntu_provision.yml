@@ -18,6 +18,7 @@
           - acl
           - whois
           - apache2-utils
+          - nfs-common
           - cifs-utils
           - linux-generic
           - unzip
