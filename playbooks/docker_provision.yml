@@ -57,7 +57,7 @@
       ansible.builtin.shell:
         cmd: bash initialization.sh
         chdir: "{{docker_dir}}"
-gi
+
     - name: Add the GIT Repository Token
       ansible.builtin.shell:
         cmd: "{{git_token}}"
