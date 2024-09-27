@@ -28,7 +28,7 @@
     - name: Install Docker Module for Python
       ansible.builtin.pip:
         name: docker
-      when: ansible_facts['distribution_major_version'] != "24"
+      when: ansible_distribution_major_version != "24"
 
     - name: Add Docker group
       ansible.builtin.group:
@@ -70,6 +70,11 @@
         cmd: git config --global --add safe.directory "{{docker_dir}}"
         chdir: "{{docker_dir}}"
 
+    - name: Check if Docker Share Exists
+      ansible.builtin.stat:
+        path: "{{ docker_share }}"
+      register: path
+
     - name: Mount Docker Backup Share
       ansible.posix.mount:
         src: "{{ docker_share }}"
@@ -77,3 +82,4 @@
         opts: "rw,vers=3,file_mode=0777,dir_mode=0777,username={{ user }},password={{ password }}"
         fstype: cifs
         state: mounted
+      when: path:.stat.exists
