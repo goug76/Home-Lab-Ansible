@@ -28,7 +28,7 @@
     - name: Install Docker Module for Python
       ansible.builtin.pip:
         name: docker
-      when: ansible_facts[‘distribution_major_version’] != "24"
+      when: ansible_facts['distribution_major_version'] != "24"
 
     - name: Add Docker group
       ansible.builtin.group:
