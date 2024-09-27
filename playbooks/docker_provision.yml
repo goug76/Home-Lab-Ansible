@@ -28,7 +28,7 @@
     - name: Install Docker Module for Python
       ansible.builtin.pip:
         name: docker
-      when: ansible_facts['distribution_release'] == "Noble"
+      when: ansible_facts['distribution_release'] != "Noble"
 
     - name: Add Docker group
       ansible.builtin.group:
