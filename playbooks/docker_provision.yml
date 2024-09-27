@@ -73,7 +73,7 @@
     - name: Check if Docker Share Exists
       ansible.builtin.stat:
         path: "{{ docker_share }}"
-      register: path
+      register: docker_path
 
     - name: Mount Docker Backup Share
       ansible.posix.mount:
@@ -82,4 +82,4 @@
         opts: "rw,vers=3,file_mode=0777,dir_mode=0777,username={{ user }},password={{ password }}"
         fstype: cifs
         state: mounted
-      when: path.stat.exists
+      when: docker_path.stat.exists
