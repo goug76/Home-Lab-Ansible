@@ -82,4 +82,4 @@
         opts: "rw,vers=3,file_mode=0777,dir_mode=0777,username={{ user }},password={{ password }}"
         fstype: cifs
         state: mounted
-      when: path:.stat.exists
+      when: path.stat.exists
