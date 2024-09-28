@@ -1,0 +1,22 @@
+---
+- name: Deploy Portainer Agent Container
+  hosts: all
+
+  tasks:
+    - name: Run the Portainer Agent Container
+      docker_container:
+        name: portainer_agent
+        image: portainer/agent:latest
+        security_opt:
+          - no-new-privileges:true
+        restart_policy: unless-stopped
+        ports:
+          - 9001:9001
+        env:
+          TZ: "America/New_York"
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+          - /var/lib/docker/volumes:/var/lib/docker/volumes:rslave
+        pull: yes
+        recreate: yes
+        state: started
