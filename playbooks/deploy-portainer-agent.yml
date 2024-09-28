@@ -7,8 +7,6 @@
       docker_container:
         name: portainer_agent
         image: portainer/agent:latest
-        security_opt:
-          - no-new-privileges:true
         restart_policy: unless-stopped
         ports:
           - 9001:9001
