@@ -1,0 +1,9 @@
+---
+- name: Add Cockpit Public Key to Known Hostes
+  hosts: all
+
+  tasks:
+    - name: add Cockpit ssh key
+      ansible.posix.authorized_key:
+        user: "{{user}}"
+        key: "{{cockpit_key}}"
