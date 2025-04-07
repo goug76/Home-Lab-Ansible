@@ -1,7 +1,37 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Mount Docker Share
+# 🗓️ Run Schedule   : N/A
+# 🔧 Description    : Mounts Docker shares for backing up containers
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - user            → The share username to use for connections
+#   - password        → The matching password or vault-encrypted secret
+#   - docker_share    → Docker share location to backup containers
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/homelab-ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
 ---
 - name: Mount Docker Share
   hosts: all
   become: true
+
+  pre_tasks:
+    - name: Ensure required secrets are defined
+      ansible.builtin.assert:
+        that:
+          - user is defined
+          - password is defined
+          - docker_share is defined
+        fail_msg: >
+          One or more required secrets are missing.
+          Please define them using Ansible Vault or in your CI/CD environment.
 
   tasks:
     - name: Install required system packages
@@ -12,6 +42,11 @@
         cache_valid_time: 3600
         state: latest
 
+    - name: Check if Docker Share Exists
+      ansible.builtin.stat:
+        path: "{{ docker_share }}"
+      register: docker_path
+
     - name: Mount Docker Backup Share
       ansible.posix.mount:
         src: "{{ docker_share }}"
@@ -19,3 +54,4 @@
         opts: "rw,vers=3,file_mode=0700,dir_mode=0777,username={{ user }},password={{ password }}"
         fstype: cifs
         state: mounted
+      when: docker_path.stat.exists

@@ -1,6 +1,40 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Proxmox Onboarding
+# 🗓️ Run Schedule   : N/A
+# 🔧 Description    : Sets up Proxmox with common setting like removing enterprise repos and addis the no-subscription repo
+#                       and addis the no-subscription repo, installs common application, enables PCI passthrough, imports 
+#                       SSH keys and removes Nag Message.
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - user               → The username that is being created
+#   - pwd                → The matching password has to be hashed mkpasswd --method=sha-512
+#   - ssh_key            → The user's SSH public key for logging in
+#   - ansible_key        → The Ansible SSH public key for running playbooks on the server
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
 ---
 - name: Proxmox Onboarding
   hosts: all
+
+  pre_tasks:
+    - name: Ensure required secrets are defined
+      ansible.builtin.assert:
+        that:
+          - user is defined
+          - pwd is defined
+          - ssh_key is defined
+          - ansible_key is defined
+        fail_msg: >
+          One or more required secrets are missing.
+          Please define them using Ansible Vault or in your CI/CD environment.
 
   tasks:
     - name: Remove Proxmox Enterprise repositories
@@ -36,21 +70,6 @@
         update_cache: no
         cache_valid_time: 3600
         state: latest
-    
-    - name: Download Step-CLI
-      ansible.builtin.get_url:
-        url: https://dl.smallstep.com/cli/docs-cli-install/latest/step-cli_amd64.deb
-        dest: /root
-
-    - name: Install Step-CLI
-      ansible.builtin.shell:
-        cmd: sudo dpkg -i step-cli_amd64.deb
-        chdir: /root
-
-    - name: Install RootCA
-      ansible.builtin.shell:
-        cmd: "{{root_ca}}"
-        chdir: /root
     
     - name: Remove useless packages from the cache
       ansible.builtin.apt:

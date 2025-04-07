@@ -9,6 +9,7 @@
         pkg:
           - cockpit
           - cockpit-pcp
+          - packagekit
         state: latest
         update_cache: true
 
@@ -18,31 +19,43 @@
         state: started
         enabled: true
 
-    - name: Create network manager file for Cockpit
-      ansible.builtin.file:
-        path: /etc/NetworkManager/conf.d/10-globally-managed-devices.conf
-        state: touch
-
-    - name: Add content to the network manager file
-      ansible.builtin.lineinfile:
-        path: /etc/NetworkManager/conf.d/10-globally-managed-devices.conf
-        line: "{{ item.line }}"
-        state: present
-      loop:
-        - line: '[keyfile]'
-        - line: 'unmanaged-devices=none'
-
-    - name: Add a dummy netowrk interface (Cockpit)
-      community.general.nmcli:
-        type: dummy
-        conn_name: fake
-        ifname: fake0
-        ip4: 1.2.3.4/24
-        gw4: 1.2.3.1
-        state: present
-    
     - name: Add Cockpit modules
       ansible.builtin.apt:
         deb: "{{ item.url }}"
       loop:
         - url: https://github.com/45Drives/cockpit-navigator/releases/download/v0.5.10/cockpit-navigator_0.5.10-1focal_all.deb
+        - url: https://github.com/45Drives/cockpit-identities/releases/download/v0.1.12/cockpit-identities_0.1.12-1focal_all.deb
+
+    - name: Create secure Netplan file for NetworkManager
+      copy:
+        dest: /etc/netplan/01-network-manager.yaml
+        content: |
+          network:
+            version: 2
+            renderer: NetworkManager
+            ethernets:
+              {{ ansible_default_ipv4.interface }}:
+                dhcp4: true
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Apply Netplan configuration
+      command: netplan apply
+
+    - name: Enable and start NetworkManager
+      systemd:
+        name: NetworkManager
+        enabled: true
+        state: started
+
+    - name: Ensure PackageKit is running
+      systemd:
+        name: packagekit
+        enabled: true
+        state: started
+
+    - name: Restart Cockpit service
+      systemd:
+        name: cockpit
+        state: restarted

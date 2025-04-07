@@ -1,3 +1,21 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Ubuntu Provisioning
+# 🗓️ Run Schedule   : N/A
+# 🔧 Description    : Initial setup for Ubuntu servers installs core packages, setsup and enables firewall
+#                       setsup Cockpit and reboots the server if necessary.
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - NONE
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
 ---
 - name: Ubuntu Provisioning
   hosts: all
@@ -8,6 +26,7 @@
       ansible.builtin.apt:
         pkg:
           - qemu-guest-agent
+          - network-manager
           - apt-transport-https
           - ca-certificates
           - software-properties-common
@@ -23,24 +42,12 @@
           - linux-generic
           - unzip
           - zip
+          - cockpit
+          - cockpit-pcp
+          - packagekit
         state: latest
         update_cache: true
     
-    - name: Download Step-CLI
-      ansible.builtin.get_url:
-        url: https://dl.smallstep.com/cli/docs-cli-install/latest/step-cli_amd64.deb
-        dest: "{{home_dir}}"
-
-    - name: Install Step-CLI
-      ansible.builtin.shell:
-        cmd: sudo dpkg -i step-cli_amd64.deb
-        chdir: "{{home_dir}}"
-
-    - name: Install RootCA
-      ansible.builtin.shell:
-        cmd: "{{root_ca}}"
-        chdir: "{{home_dir}}"
-
     - name: Deny all incoming traffic
       ufw:
         default: deny
@@ -69,11 +76,73 @@
       ufw:
         state: enabled
 
-    - name: Check if reboot required
+    - name: Enable Cockpit
+      ansible.builtin.systemd_service:
+        name: cockpit.socket
+        state: started
+        enabled: true
+    
+    - name: Add Cockpit modules
+      ansible.builtin.apt:
+        deb: "{{ item.url }}"
+      loop:
+        - url: https://github.com/45Drives/cockpit-navigator/releases/download/v0.5.10/cockpit-navigator_0.5.10-1focal_all.deb
+        - url: https://github.com/45Drives/cockpit-identities/releases/download/v0.1.12/cockpit-identities_0.1.12-1focal_all.deb
+
+    - name: Create secure Netplan file for NetworkManager
+      copy:
+        dest: /etc/netplan/01-network-manager.yaml
+        content: |
+          network:
+            version: 2
+            renderer: NetworkManager
+            ethernets:
+              {{ ansible_default_ipv4.interface }}:
+                dhcp4: true
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Apply Netplan configuration
+      command: netplan apply
+
+    - name: Enable and start NetworkManager
+      systemd:
+        name: NetworkManager
+        enabled: true
+        state: started
+
+    - name: Ensure PackageKit is running
+      systemd:
+        name: packagekit
+        enabled: true
+        state: started
+
+    - name: Restart Cockpit service
+      systemd:
+        name: cockpit
+        state: restarted
+
+    - name: Check if /var/run/reboot-required exists (Debian/Ubuntu)
       ansible.builtin.stat:
         path: /var/run/reboot-required
-      register: reboot_required_file
+      register: reboot_required_ubuntu
 
-    - name: Reboot if required
+    - name: Check if /var/run/needrestart exists (Raspberry Pi OS)
+      ansible.builtin.stat:
+        path: /var/run/needrestart
+      register: reboot_required_pi
+
+    - name: Set reboot_required to true if any indicator exists
+      ansible.builtin.set_fact:
+        reboot_required: true
+      when: reboot_required_ubuntu.stat.exists or reboot_required_pi.stat.exists
+
+    - name: Show message about reboot
+      ansible.builtin.debug:
+        msg: "System requires reboot. Proceeding with reboot..."
+      when: reboot_required | default(false)
+
+    - name: Reboot the system if needed
       ansible.builtin.reboot:
-      when: reboot_required_file.stat.exists == true 
+      when: reboot_required | default(false)

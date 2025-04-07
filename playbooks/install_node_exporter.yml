@@ -1,0 +1,126 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Install Node-Exporter
+# 🗓️ Run Schedule   : N/A
+# 🔧 Description    : Install Node-Exporter on devices to collect data for Prometheus (Multi-Arch Latest Version)
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - NONE
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
+---
+- name: Install Prometheus Node Exporter (Multi-Arch Latest Version)
+  hosts: all
+  become: yes
+
+  vars:
+    node_exporter_user: "node_exporter"
+    node_exporter_bin_dir: "/usr/local/bin"
+    node_exporter_systemd_path: "/etc/systemd/system/node_exporter.service"
+    node_exporter_tmp_dir: "/tmp/node_exporter_install"
+
+  pre_tasks:
+    - name: Ensure temp directory exists
+      file:
+        path: "{{ node_exporter_tmp_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Get latest node_exporter release info from GitHub
+      uri:
+        url: https://api.github.com/repos/prometheus/node_exporter/releases/latest
+        return_content: yes
+      register: github_release
+
+    - name: Set node_exporter_version from GitHub API
+      set_fact:
+        node_exporter_version: "{{ github_release.json.tag_name | regex_replace('^v', '') }}"
+
+    - name: Map architecture to node_exporter target
+      set_fact:
+        node_exporter_arch: >-
+          {{ (
+            'amd64' if ansible_architecture == 'x86_64' else
+            'arm64' if ansible_architecture in ['aarch64', 'armv8'] else
+            'armv7' if ansible_architecture in ['armv7l', 'armv6l'] else
+            'unsupported'
+          ) | trim }}
+
+
+    - name: Fail if unsupported architecture
+      fail:
+        msg: "Unsupported architecture: {{ ansible_architecture }}"
+      when: node_exporter_arch == 'unsupported'
+
+    - name: Set download URL and extracted path
+      set_fact:
+        node_exporter_download_url: >-
+          https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz
+        node_exporter_extracted_dir: "{{ node_exporter_tmp_dir }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}"
+
+  tasks:
+
+    - name: Create node_exporter user
+      user:
+        name: "{{ node_exporter_user }}"
+        shell: /usr/sbin/nologin
+        system: yes
+        create_home: no
+
+    - name: Download Node Exporter
+      get_url:
+        url: "{{ node_exporter_download_url }}"
+        dest: "{{ node_exporter_tmp_dir }}/node_exporter.tar.gz"
+        mode: '0644'
+
+    - name: Extract Node Exporter archive
+      unarchive:
+        src: "{{ node_exporter_tmp_dir }}/node_exporter.tar.gz"
+        dest: "{{ node_exporter_tmp_dir }}"
+        remote_src: yes
+        creates: "{{ node_exporter_extracted_dir }}/node_exporter"
+
+    - name: Install Node Exporter binary
+      copy:
+        src: "{{ node_exporter_extracted_dir }}/node_exporter"
+        dest: "{{ node_exporter_bin_dir }}/node_exporter"
+        owner: "{{ node_exporter_user }}"
+        group: "{{ node_exporter_user }}"
+        mode: '0755'
+        remote_src: yes
+
+    - name: Create systemd service for node_exporter
+      copy:
+        dest: "{{ node_exporter_systemd_path }}"
+        content: |
+          [Unit]
+          Description=Node Exporter
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          User={{ node_exporter_user }}
+          Group={{ node_exporter_user }}
+          Type=simple
+          ExecStart={{ node_exporter_bin_dir }}/node_exporter
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: Reload systemd
+
+    - name: Enable and start node_exporter service
+      systemd:
+        name: node_exporter
+        enabled: true
+        state: started
+
+  handlers:
+    - name: Reload systemd
+      command: systemctl daemon-reload

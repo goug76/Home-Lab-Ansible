@@ -1,7 +1,38 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Mount Media Share
+# 🗓️ Run Schedule   : N/A
+# 🔧 Description    : Mount the media share for use with Medai Stack
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - user               → The share username to use for connections
+#   - password           → The matching password or vault-encrypted secret
+#   - media_share        → Media share location to stream content
+#   - downloads_share    → Downloads share location for downloading content
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
 ---
-- name: Mount Docker Share
+- name: Mount Medai Share
   hosts: all
   become: true
+
+  pre_tasks:
+    - name: Ensure required secrets are defined
+      ansible.builtin.assert:
+        that:
+          - user is defined
+          - password is defined
+          - media_share is defined
+        fail_msg: >
+          One or more required secrets are missing.
+          Please define them using Ansible Vault or in your CI/CD environment.
 
   tasks:
     - name: Install required system packages
@@ -12,6 +43,11 @@
         cache_valid_time: 3600
         state: latest
 
+    - name: Check if Media Share Exists
+      ansible.builtin.stat:
+        path: "{{ media_share }}"
+      register: media_path
+
     - name: Mount Media Share
       ansible.posix.mount:
         src: "{{ media_share }}"
@@ -19,6 +55,12 @@
         opts: "rw,vers=3,file_mode=0777,dir_mode=0777,username={{ user }},password={{ password }}"
         fstype: cifs
         state: mounted
+      when: media_path.stat.exists
+
+    - name: Check if Downloads Share Exists
+      ansible.builtin.stat:
+        path: "{{ downloads_share }}"
+      register: download_path
 
     - name: Mount Downloads Share
       ansible.posix.mount:
@@ -27,3 +69,4 @@
         opts: "rw,vers=3,file_mode=0777,dir_mode=0777,username={{ user }},password={{ password }}"
         fstype: cifs
         state: mounted
+      when: download_path.stat.exists

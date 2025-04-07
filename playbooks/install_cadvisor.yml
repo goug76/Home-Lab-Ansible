@@ -1,0 +1,74 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Install cAdvisor
+# 🗓️ Run Schedule   : N/A
+# 🔧 Description    : Install cAdvisor on Docker hosts to collect data for Prometheus
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - NONE
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
+---
+- name: Install cAdvisor as a native service
+  hosts: all
+  become: yes
+  tasks:
+
+    - name: Create cAdvisor directory
+      file:
+        path: /opt/cadvisor
+        state: directory
+        mode: '0755'
+
+    - name: Set architecture fact
+      set_fact:
+        cadvisor_arch: >-
+          {{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' if 'aarch64' in ansible_architecture else 'unsupported' }}
+
+    - name: Fail if architecture is unsupported
+      fail:
+        msg: "Unsupported architecture: {{ ansible_architecture }}"
+      when: cadvisor_arch == 'unsupported'
+
+    - name: Download cAdvisor binary
+      get_url:
+        url: "https://github.com/google/cadvisor/releases/download/v0.47.2/cadvisor-v0.47.2-linux-{{ cadvisor_arch }}"
+        dest: /opt/cadvisor/cadvisor
+        mode: '0755'
+
+    - name: Create systemd service for cAdvisor
+      copy:
+        dest: /etc/systemd/system/cadvisor.service
+        content: |
+          [Unit]
+          Description=cAdvisor Service
+          After=network.target
+
+          [Service]
+          ExecStart=/opt/cadvisor/cadvisor \
+            --listen_ip=0.0.0.0 \
+            --port=8080 \
+            --logtostderr \
+            --docker_only=true \
+            --housekeeping_interval=10s
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start cAdvisor
+      systemd:
+        name: cadvisor
+        enabled: yes
+        state: started

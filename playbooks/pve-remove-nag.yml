@@ -1,3 +1,20 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Remove Proxmox Nag Message
+# 🗓️ Run Schedule   : N/A
+# 🔧 Description    : Removes the No valid subscription popup message
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - NONE
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
 ---
 - name: Remove "No valid subscription" popup on login to webgui
 #  hosts: vm

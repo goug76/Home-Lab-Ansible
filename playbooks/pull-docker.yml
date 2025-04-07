@@ -1,6 +1,34 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Pull Docker Repository
+# 🗓️ Run Schedule   : Schedule Info (e.g. Every Saturday at 2 AM)
+# 🔧 Description    : This pulls the Docker Repository from GitHub
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - docker_dir      → Absolute path where Docker containers are stored e.g. (/home/user/docker)
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+#
+# Not used anymore, but good info for future use.
+# ===============================================================================
+
 ---
 - name: Pull Docker Repository
   hosts: all
+
+  pre_tasks:
+    - name: Ensure required secrets are defined
+      ansible.builtin.assert:
+        that:
+          - docker_dir is defined
+        fail_msg: >
+          One or more required secrets are missing.
+          Please define them using Ansible Vault or in your CI/CD environment.
 
   tasks:
     - name: Pull from GIT

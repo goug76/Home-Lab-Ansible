@@ -1,7 +1,33 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Plex Backup
+# 🗓️ Run Schedule   : Weekly or Daily
+# 🔧 Description    : Backups Plex and the Media Stack
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - docker_dir      → Absolute path where Docker containers are stored e.g. (/home/user/docker)
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
 ---
 - name: Plex Backup
   hosts: all
   become: true
+
+  pre_tasks:
+    - name: Ensure required secrets are defined
+      ansible.builtin.assert:
+        that:
+          - docker_dir is defined
+        fail_msg: >
+          One or more required secrets are missing.
+          Please define them using Ansible Vault or in your CI/CD environment.
 
   tasks:
     - name: Install required system packages
@@ -15,10 +41,10 @@
     - name: Zip Docker Files for Backup
       community.general.archive:
         path:
-          - "{{docker_dir}}appdata/plex"
-          - "{{docker_dir}}appdata/overseerr"
-          - "{{docker_dir}}appdata/prowlarr"
-          - "{{docker_dir}}appdata/radarr"
-          - "{{docker_dir}}appdata/sonarr"
+          - "{{docker_dir}}plex"
+          - "{{docker_dir}}overseerr"
+          - "{{docker_dir}}prowlarr"
+          - "{{docker_dir}}radarr"
+          - "{{docker_dir}}sonarr"
         dest: '/mnt/docker/{{ ansible_hostname | lower }}_backup.zip'
         format: zip
