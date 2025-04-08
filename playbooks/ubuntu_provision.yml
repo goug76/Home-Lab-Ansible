@@ -145,4 +145,9 @@
 
     - name: Reboot the system if needed
       ansible.builtin.reboot:
+        msg: "Reboot initiated by Goug's HomeLab Ansible playbook"
+        pre_reboot_delay: 10          # Give services a moment to settle
+        post_reboot_delay: 30         # Extra wait time after host is back
+        reboot_timeout: 600           # Increase timeout for slower booting devices
+        test_command: uptime          # Command to verify host is back
       when: reboot_required | default(false)
