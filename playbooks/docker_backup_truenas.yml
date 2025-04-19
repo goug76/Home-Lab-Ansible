@@ -1,0 +1,52 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Backup Docker on TureNAS hosts
+# 🗓️ Run Schedule   : Daily
+# 🔧 Description    : Backup Docker containers on TrueNAS hosts.
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - docker_share  → Docker share location to backup containers
+#   - docker_dir    → Absolute path where Docker containers are stored e.g. (/home/user/docker)
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
+---
+- name: Backup Docker on TrueNAS host
+  hosts: docker_truenas
+  become: yes
+  vars:
+    docker_dir: "{{ docker_dir }}"
+    backup_dir: "{{ docker_share }}"
+    timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | regex_replace(':', '') }}"
+    hostname: "{{ ansible_hostname | lower }}"
+  tasks:
+    - name: Prune unused Docker images
+      command: docker image prune -af
+      register: prune_result
+      changed_when: prune_result.rc == 0
+
+    - name: Create backup archive
+      archive:
+        path: "{{ docker_dir }}"
+        dest: "{{ backup_dir }}/docker_backup_{{ hostname }}_{{ timestamp }}.zip"
+        format: zip
+
+    - name: Delete backups older than 3 days
+      find:
+        paths: "{{ backup_dir }}"
+        patterns: "docker_backup_{{ hostname }}_*.zip"
+        age: 3d
+        recurse: no
+      register: old_backups
+
+    - name: Remove old backup files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_backups.files }}"
