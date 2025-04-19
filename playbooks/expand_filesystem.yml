@@ -1,0 +1,59 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Expand root partition and filesystem
+# 🗓️ Run Schedule   : Manual
+# 🔧 Description    : After expanding the hard disk in Proxmox this expands the filesystem in the VM.
+#                       Not always needed, but good to have just incase.
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - NONE
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
+---
+- name: Expand root partition and filesystem
+  hosts: docker_hosts  # or whatever group/host you like
+  become: yes
+  vars:
+    root_partition: "/dev/sda1"  # Customize if different
+    root_disk: "/dev/sda"        # Customize if different
+  tasks:
+
+    - name: Install growpart (cloud-guest-utils)
+      apt:
+        name: cloud-guest-utils
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Expand the root partition
+      command: "growpart {{ root_disk }} 1"
+      register: growpart_result
+      changed_when: "'CHANGED' in growpart_result.stdout or 'CHANGED' in growpart_result.stderr"
+      failed_when: growpart_result.rc != 0 and '"NOCHANGE"' not in growpart_result.stdout
+      ignore_errors: yes
+
+    - name: Get filesystem type of root partition
+      command: "lsblk -no FSTYPE {{ root_partition }}"
+      register: fs_type
+
+    - name: Resize ext4 filesystem
+      command: "resize2fs {{ root_partition }}"
+      when: "'ext4' in fs_type.stdout"
+
+    - name: Resize xfs filesystem
+      command: "xfs_growfs /"
+      when: "'xfs' in fs_type.stdout"
+
+    - name: Show final disk usage
+      command: df -h
+      register: final_usage
+
+    - name: Print disk usage
+      debug:
+        var: final_usage.stdout_lines
