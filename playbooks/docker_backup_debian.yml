@@ -1,0 +1,96 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Backup Docker on Debian hosts
+# 🗓️ Run Schedule   : Daily
+# 🔧 Description    : Backup Docker containers on Debian hosts
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - user            → The share username to use for connections
+#   - password        → The matching password or vault-encrypted secret
+#   - docker_share    → Docker share location to backup containers
+#   - docker_dir      → Absolute path where Docker containers are stored e.g. (/home/user/docker)
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
+---
+- name: Backup Docker on Debian hosts
+  hosts: all
+  become: yes
+
+  pre_tasks:
+    - name: Ensure required secrets are defined
+      ansible.builtin.assert:
+        that:
+          - user is defined
+          - password is defined
+          - docker_share is defined
+          - docker_dir is defined
+        fail_msg: >
+          One or more required secrets are missing.
+          Please define them using Ansible Vault or in your CI/CD environment.
+          
+  vars:
+    docker_dir: "{{ docker_dir }}"
+    backup_dir: "/mnt/backups/docker"
+    nas_mount_src: "{{ docker_share }}"
+    timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | regex_replace(':', '') }}"
+    hostname: "{{ ansible_hostname | lower }}"
+
+  tasks:
+    - name: Ensure mount point exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+
+    - name: Check if backup_dir is mounted
+      command: mountpoint -q {{ backup_dir }}
+      register: mount_check
+      ignore_errors: true
+
+    - name: Mount NAS backup directory if not mounted
+      mount:
+        path: "{{ backup_dir }}"
+        src: "{{ nas_mount_src }}"
+        fstype: cifs
+        opts: "rw,vers=3,file_mode=0700,dir_mode=0777,username={{ user }},password={{ password }}"
+        state: mounted
+      when: mount_check.rc != 0
+
+    - name: Stop all Docker containers
+      command: docker stop $(docker ps -q)
+      ignore_errors: yes
+
+    - name: Prune unused Docker images
+      command: docker image prune -af
+      register: prune_result
+      changed_when: prune_result.rc == 0
+
+    - name: Create backup archive
+      archive:
+        path: "{{ docker_dir }}"
+        dest: "{{ backup_dir }}/docker_backup_{{ hostname }}_{{ timestamp }}.zip"
+        format: zip
+
+    - name: Start all Docker containers
+      command: docker start $(docker ps -a -q)
+      ignore_errors: yes
+
+    - name: Delete backups older than 3 days
+      find:
+        paths: "{{ backup_dir }}"
+        patterns: "docker_backup_{{ hostname }}_*.zip"
+        age: 3d
+        recurse: no
+      register: old_backups
+
+    - name: Remove old backup files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_backups.files }}"
