@@ -63,7 +63,7 @@
       when: mount_check.rc != 0
 
     - name: Stop all Docker containers
-      command: docker stop $(docker ps -q)
+      shell: docker stop $(docker ps -q)
       ignore_errors: yes
 
     - name: Prune unused Docker images
@@ -71,11 +71,26 @@
       register: prune_result
       changed_when: prune_result.rc == 0
 
+    - name: Find old query log files
+      find:
+        paths: "{{ docker_dir }}"
+        patterns: "querylog.json.*"
+        recurse: yes
+      register: old_querylogs
+
+    - name: Delete old query log files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_querylogs.files }}"
+
     - name: Create backup archive
       archive:
         path: "{{ docker_dir }}"
         dest: "{{ backup_dir }}/docker_backup_{{ hostname }}_{{ timestamp }}.zip"
         format: zip
+        exclude_path:
+          - "**/querylog.json*"
 
     - name: Start all Docker containers
       command: docker start $(docker ps -a -q)
