@@ -122,6 +122,13 @@
       systemd:
         name: cockpit
         state: restarted
+      
+    - name: Disable and stop systemd-networkd-wait-online service
+      systemd:
+        name: systemd-networkd-wait-online.service
+        enabled: false
+        state: stopped
+        masked: true
 
     - name: Check if /var/run/reboot-required exists (Debian/Ubuntu)
       ansible.builtin.stat:
