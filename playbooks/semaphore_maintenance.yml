@@ -40,6 +40,22 @@
         path: /var/run/reboot-required
       register: reboot_required
 
+    - name: Install 'at' if reboot is needed
+      apt:
+        name: at
+        state: present
+        update_cache: yes
+      become: true
+      when: reboot_required.stat.exists
+
+    - name: Ensure 'atd' service is running
+      service:
+        name: atd
+        state: started
+        enabled: yes
+      become: true
+      when: reboot_required.stat.exists
+
     - name: Schedule a reboot in 2 minutes if needed
       shell: "echo 'reboot' | at now + 2 minutes"
       when: reboot_required.stat.exists
