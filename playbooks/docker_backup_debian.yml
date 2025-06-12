@@ -90,10 +90,7 @@
         dest: "{{ backup_dir }}/docker_backup_{{ hostname }}_{{ timestamp }}.zip"
         format: zip
         exclude_path:
-          - "adguardhome/work/data/querylog.json"
-          - "adguardhome/work/data/querylog.json.*"
-          - "**/querylog.json"
-          - "**/querylog.json.*"
+          - "{{ docker_dir }}/adguardhome/work/data/querylog.json"
 
     - name: Start all Docker containers
       command: docker start $(docker ps -a -q)
