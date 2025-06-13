@@ -89,8 +89,9 @@
         path: "{{ docker_dir }}"
         dest: "{{ backup_dir }}/docker_backup_{{ hostname }}_{{ timestamp }}.zip"
         format: zip
-        exclude_path:
-          - "{{ docker_dir }}/adguardhome/work/data/querylog.json"
+        exclusion_patterns:
+          - "**/querylog.json"
+          - "**/querylog.json.*"
 
     - name: Start all Docker containers
       command: docker start $(docker ps -a -q)
