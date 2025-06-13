@@ -18,7 +18,7 @@
 
 ---
 - name: Ubuntu Provisioning
-  hosts: all
+  hosts: new_device
   become: true
 
   tasks:

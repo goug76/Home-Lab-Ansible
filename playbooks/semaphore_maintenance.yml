@@ -17,7 +17,7 @@
 
 ---
 - name: Update APT Packages and Reboot if Required
-  hosts: all
+  hosts: semaphore
   become: yes
 
   tasks:
