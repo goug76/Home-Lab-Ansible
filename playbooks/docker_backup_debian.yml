@@ -20,7 +20,7 @@
 
 ---
 - name: Backup Docker on Debian hosts
-  hosts: all
+  hosts: docker-devices
   become: yes
 
   pre_tasks:
