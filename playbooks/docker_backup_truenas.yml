@@ -45,16 +45,27 @@
       shell: docker start $(docker ps -a -q)
       ignore_errors: yes
 
-    - name: Delete backups older than 3 days
+    - name: Find all backup files for this host
       find:
         paths: "{{ backup_dir }}"
         patterns: "docker_backup_{{ hostname }}_*.zip"
-        age: 3d
         recurse: no
-      register: old_backups
+        file_type: file
+      register: all_backups
 
-    - name: Remove old backup files
+    - name: Sort backups by mtime (modification time)
+      set_fact:
+        sorted_backups: "{{ all_backups.files | sort(attribute='mtime', reverse=true) }}"
+
+    - name: Debug found backup files (optional)
+      debug:
+        msg: "{{ item.path }}"
+      loop: "{{ sorted_backups }}"
+      when: sorted_backups | length > 3
+
+    - name: Remove older backups, keeping only the 3 most recent
       file:
         path: "{{ item.path }}"
         state: absent
-      loop: "{{ old_backups.files }}"
+      loop: "{{ sorted_backups[3:] }}"
+      when: sorted_backups | length > 3
