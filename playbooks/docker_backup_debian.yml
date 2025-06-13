@@ -101,12 +101,15 @@
       find:
         paths: "{{ backup_dir }}"
         patterns: "docker_backup_{{ hostname }}_*.zip"
-        age: 3d
         recurse: no
-      register: old_backups
+        file_type: file
+        sort: time
+        age_stamp: mtime
+      register: all_backups
 
     - name: Remove old backup files
       file:
         path: "{{ item.path }}"
         state: absent
-      loop: "{{ old_backups.files }}"
+      loop: "{{ all_backups.files[3:] }}"
+      when: all_backups.files | length > 3
