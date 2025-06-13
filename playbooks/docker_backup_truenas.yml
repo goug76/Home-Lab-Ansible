@@ -31,11 +31,19 @@
       register: prune_result
       changed_when: prune_result.rc == 0
 
+    - name: Stop all Docker containers
+      shell: docker stop $(docker ps -q)
+      ignore_errors: yes
+
     - name: Create backup archive
       archive:
         path: "{{ docker_dir }}"
         dest: "{{ backup_dir }}/docker_backup_{{ hostname }}_{{ timestamp }}.zip"
         format: zip
+
+    - name: Start all Docker containers
+      shell: docker start $(docker ps -a -q)
+      ignore_errors: yes
 
     - name: Delete backups older than 3 days
       find:
