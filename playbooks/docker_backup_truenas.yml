@@ -18,7 +18,7 @@
 
 ---
 - name: Backup Docker on TrueNAS host
-  hosts: docker_truenas
+  hosts: truenas
   become: yes
   vars:
     docker_dir: "{{ docker_dir }}"
