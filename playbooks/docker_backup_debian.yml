@@ -94,7 +94,7 @@
           - "**/querylog.json.*"
 
     - name: Start all Docker containers
-      command: docker start $(docker ps -a -q)
+      shell: docker start $(docker ps -a -q)
       ignore_errors: yes
 
     - name: Delete backups older than 3 days
