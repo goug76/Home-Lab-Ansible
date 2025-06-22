@@ -7,9 +7,6 @@
 #
 # 🔐 Required Secure Variables (do NOT store in GitHub):
 #   - user               → The system admin username to use for connections
-#   - repo               → The GitHub repositories URL
-#   - docker_dir         → Absolute path where Docker containers are stored e.g. (/home/user/docker)
-#   - git_token          → GitHub Token
 #   - docker_share       → Optional the Docker share location to backup containers
 #
 # ✅ These must be provided via Ansible Vault, Semaphore Secrets, or CI/CD env vars.
@@ -29,9 +26,7 @@
       ansible.builtin.assert:
         that:
           - user is defined
-          - repo is defined
           - docker_dir is defined
-          - git_token is defined
         fail_msg: >
           One or more required secrets are missing.
           Please define them using Ansible Vault or in your CI/CD environment.
@@ -55,7 +50,6 @@
           - containerd.io
           - docker-buildx-plugin
           - docker-compose-plugin
-          - cadvisor
         state: latest
         update_cache: true
 
@@ -74,35 +68,6 @@
         name: "{{ user }}"
         groups: docker
         append: true
-
-    - name: Clone the Docker Repository
-      ansible.builtin.git:
-        repo: "{{repo}}"
-        dest: "{{docker_dir}}"
-        single_branch: yes
-        version: main
-        force: true
-
-    - name: Make the initialization script executable
-      ansible.builtin.shell:
-        cmd: chmod 700 initialization.sh
-        chdir: "{{docker_dir}}"
-
-    - name: Execute initialization script
-      ansible.builtin.shell:
-        cmd: bash initialization.sh
-        chdir: "{{docker_dir}}"
-
-    - name: Add the GIT Repository Token
-      ansible.builtin.shell:
-        cmd: "{{git_token}}"
-        chdir: "{{docker_dir}}"
-
-    - name: Trust Docker root directory
-      become_user: "{{ user }}"
-      ansible.builtin.shell:
-        cmd: git config --global --add safe.directory "{{docker_dir}}"
-        chdir: "{{docker_dir}}"
 
     - name: Check if Docker Share Exists
       ansible.builtin.stat:
