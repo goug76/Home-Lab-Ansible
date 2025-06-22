@@ -32,6 +32,8 @@
         fail_msg: >
           One or more required secrets are missing.
           Please define them using Ansible Vault or in your CI/CD environment.
+  vars:
+    docker_dir: "/mnt/docker"
 
   tasks:
     - name: Install required system packages
@@ -42,16 +44,21 @@
         cache_valid_time: 3600
         state: latest
 
-    - name: Check if Docker Share Exists
-      ansible.builtin.stat:
-        path: "{{ docker_share }}"
-      register: docker_path
+    - name: Ensure mount point exists
+      file:
+        path: "{{ docker_dir }}"
+        state: directory
+
+    - name: Check if docker_dir is mounted
+      command: mountpoint -q {{ docker_dir }}
+      register: mount_check
+      ignore_errors: true
 
     - name: Mount Docker Backup Share
       ansible.posix.mount:
         src: "{{ docker_share }}"
-        path: /mnt/docker
-        opts: "rw,vers=3,file_mode=0700,dir_mode=0777,username={{ user }},password={{ password }}"
+        path: "{{ docker_dir }}"
+        opts: "rw,vers=3,file_mode=0777,dir_mode=0777,username={{ user }},password={{ password }}"
         fstype: cifs
         state: mounted
-      when: docker_path.stat.exists
+      when: mount_check.rc != 0
