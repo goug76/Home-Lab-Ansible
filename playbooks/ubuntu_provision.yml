@@ -45,6 +45,7 @@
           - cockpit
           - cockpit-pcp
           - packagekit
+          - keepalived
         state: latest
         update_cache: true
     
