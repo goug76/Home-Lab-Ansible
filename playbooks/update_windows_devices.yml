@@ -1,6 +1,25 @@
-- name: Test Windows Update Scan
+===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Update Windows Devices
+# 🗓️ Run Schedule   : Every Tuesday at 2 AM
+# 🔧 Description    : Updates servers with the latest updates
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - NONE
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
+---
+- name: Weekly Windows Updates
   hosts: windows
   gather_facts: false
+  serial: 1
 
   vars:
     windows_update_categories:
@@ -11,11 +30,61 @@
       - DefinitionUpdates
 
   tasks:
-    - name: Search for updates
+    - name: Search for available Windows updates
       ansible.windows.win_updates:
         category_names: "{{ windows_update_categories }}"
         state: searched
-      register: result
+      register: update_search
 
-    - debug:
-        var: result.found_update_count
+    - name: Show update search results
+      ansible.builtin.debug:
+        msg:
+          - "Found updates: {{ update_search.found_update_count | default(0) }}"
+          - "Reboot required before install: {{ update_search.reboot_required | default(false) }}"
+
+    - name: Show updates found
+      ansible.builtin.debug:
+        var: update_search.updates
+
+    - name: Install Windows updates
+      ansible.windows.win_updates:
+        category_names: "{{ windows_update_categories }}"
+        state: installed
+      register: update_install
+
+    - name: Run DISM component cleanup
+      ansible.windows.win_shell: |
+        DISM.exe /Online /Cleanup-Image /StartComponentCleanup /NoRestart
+      changed_when: false
+
+    - name: Check if reboot is required after updates
+      ansible.windows.win_shell: |
+        $paths = @(
+          'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending',
+          'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
+        )
+
+        $pending = $false
+        foreach ($path in $paths) {
+          if (Test-Path $path) {
+            $pending = $true
+          }
+        }
+
+        if ($pending) {
+          Write-Output "true"
+        }
+        else {
+          Write-Output "false"
+        }
+      register: reboot_pending_check
+      changed_when: false
+
+    - name: Reboot if required
+      ansible.windows.win_reboot:
+        msg: "Reboot initiated by Ansible after Windows Updates"
+        post_reboot_delay: 60
+        reboot_timeout: 3600
+      when:
+        - update_install.reboot_required | default(false)
+          or reboot_pending_check.stdout_lines[0] | trim == 'true'
