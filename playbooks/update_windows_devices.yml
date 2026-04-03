@@ -1,0 +1,12 @@
+- name: Test Windows Update Scan
+  hosts: windows
+  gather_facts: false
+
+  tasks:
+    - name: Search for updates
+      ansible.windows.win_updates:
+        state: searched
+      register: result
+
+    - debug:
+        var: result.found_update_count
