@@ -1,5 +1,5 @@
 - name: Test Windows Update Scan
-  hosts: all
+  hosts: windows
   gather_facts: false
 
   tasks:
