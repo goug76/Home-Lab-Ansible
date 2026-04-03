@@ -2,7 +2,7 @@
 # 🧠 Goug's HomeLab Ansible Playbook
 # -------------------------------------------------------------------------------
 # 📦 Playbook Name  : Update Windows Devices
-# 🗓️ Run Schedule   : Every Tuesday at 2 AM
+# 🗓️ Run Schedule   : Every Wednesday at 2 AM
 # 🔧 Description    : Updates servers with the latest updates
 #
 # 🔐 Required Secure Variables (do NOT store in GitHub):
