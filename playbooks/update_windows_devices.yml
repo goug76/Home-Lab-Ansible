@@ -2,9 +2,18 @@
   hosts: windows
   gather_facts: false
 
+  vars:
+    windows_update_categories:
+      - CriticalUpdates
+      - SecurityUpdates
+      - UpdateRollups
+      - Updates
+      - DefinitionUpdates
+
   tasks:
     - name: Search for updates
       ansible.windows.win_updates:
+        category_names: "{{ windows_update_categories }}"
         state: searched
       register: result
 
