@@ -90,6 +90,9 @@
           network:
             version: 2
             renderer: NetworkManager
+            ethernets:
+              {{ ansible_default_ipv4.interface }}:
+                dhcp4: true
         owner: root
         group: root
         mode: '0600'
@@ -99,7 +102,7 @@
 
     - name: Flush handlers so network changes apply now
       ansible.builtin.meta: flush_handlers
-      
+
     - name: Ensure PackageKit is running
       ansible.builtin.systemd_service:
         name: packagekit
