@@ -20,6 +20,12 @@
   hosts: all
   become: true
 
+  vars:
+    docker_apt_arch: >-
+      {{ 'amd64' if ansible_architecture == 'x86_64'
+         else 'arm64' if ansible_architecture == 'aarch64'
+         else ansible_architecture }}
+
   pre_tasks:
     - name: Ensure required secrets are defined
       ansible.builtin.assert:
