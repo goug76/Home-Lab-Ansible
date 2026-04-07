@@ -27,26 +27,18 @@
         pkg:
           - qemu-guest-agent
           - network-manager
-          - apt-transport-https
           - ca-certificates
-          - software-properties-common
           - python3-pip
-          - virtualenv
-          - python3-setuptools
-          - gnupg
           - acl
           - whois
           - apache2-utils
-          - nfs-common
-          - cifs-utils
-          - linux-generic
           - unzip
           - zip
+          - ufw
           - cockpit
           - cockpit-pcp
-          - packagekit
-          - keepalived
-        state: latest
+          - cockpit-packagekit
+        state: present
         update_cache: true
     
     - name: Deny all incoming traffic
@@ -67,6 +59,7 @@
       loop:
         - '172.16.0.0/12'
         - '192.168.0.0/16'
+        - '10.0.0.0/8'
 
     - name: Allow OpenSSH traffic
       ufw:
@@ -91,39 +84,28 @@
         - url: https://github.com/45Drives/cockpit-identities/releases/download/v0.1.12/cockpit-identities_0.1.12-1focal_all.deb
 
     - name: Create secure Netplan file for NetworkManager
-      copy:
+      ansible.builtin.copy:
         dest: /etc/netplan/01-network-manager.yaml
         content: |
           network:
             version: 2
             renderer: NetworkManager
-            ethernets:
-              {{ ansible_default_ipv4.interface }}:
-                dhcp4: true
         owner: root
         group: root
         mode: '0600'
+      notify:
+        - Apply netplan
+        - Restart NetworkManager
 
-    - name: Apply Netplan configuration
-      command: netplan apply
-
-    - name: Enable and start NetworkManager
-      systemd:
-        name: NetworkManager
-        enabled: true
-        state: started
-
+    - name: Flush handlers so network changes apply now
+      ansible.builtin.meta: flush_handlers
+      
     - name: Ensure PackageKit is running
-      systemd:
+      ansible.builtin.systemd_service:
         name: packagekit
         enabled: true
         state: started
 
-    - name: Restart Cockpit service
-      systemd:
-        name: cockpit
-        state: restarted
-      
     - name: Disable and stop systemd-networkd-wait-online service
       systemd:
         name: systemd-networkd-wait-online.service
@@ -159,3 +141,12 @@
         reboot_timeout: 600           # Increase timeout for slower booting devices
         test_command: uptime          # Command to verify host is back
       when: reboot_required | default(false)
+
+  handlers:
+    - name: Apply netplan
+      ansible.builtin.command: netplan apply
+
+    - name: Restart NetworkManager
+      ansible.builtin.systemd_service:
+        name: NetworkManager
+        state: restarted
