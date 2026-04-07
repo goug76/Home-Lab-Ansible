@@ -6,7 +6,10 @@
 # 🔧 Description     : Installs Docker and docker related tasks
 #
 # 🔐 Required Secure Variables (do NOT store in GitHub):
-#   - user               → The system admin username to use for connections
+#   - user            → The share username to use for connections
+#   - password        → The matching password or vault-encrypted secret
+#   - docker_share    → Docker share location to backup containers
+#   - docker_dir      → Absolute path where Docker containers are stored e.g. (/home/user/docker)
 #
 # ✅ These must be provided via Ansible Vault, Semaphore Secrets, or CI/CD env vars.
 # ❌ Never store actual values in this file or in version control.
@@ -20,22 +23,38 @@
   hosts: all
   become: true
 
-  vars:
-    docker_apt_arch: >-
-      {{ 'amd64' if ansible_architecture == 'x86_64'
-         else 'arm64' if ansible_architecture == 'aarch64'
-         else ansible_architecture }}
-
   pre_tasks:
     - name: Ensure required secrets are defined
       ansible.builtin.assert:
         that:
           - user is defined
+          - password is defined
+          - docker_share is defined
+          - docker_dir is defined
         fail_msg: >
           One or more required secrets are missing.
           Please define them using Ansible Vault or in your CI/CD environment.
+          
+  vars:
+    docker_dir: "{{ docker_dir }}"
+    backup_dir: "/mnt/backups/docker"
+    nas_mount_src: "{{ docker_share }}"
+    docker_root_dir: "/home/{{ user }}/docker"
+    portainer_dir: "{{ docker_root_dir }}/portainer"
+    docker_apt_arch: >-
+      {{ 'amd64' if ansible_architecture == 'x86_64'
+         else 'arm64' if ansible_architecture == 'aarch64'
+         else ansible_architecture }}
 
   tasks:
+    - name: Install required system packages
+      ansible.builtin.apt:
+        pkg:
+          - cifs-utils
+        update_cache: no
+        cache_valid_time: 3600
+        state: latest
+
     - name: Ensure apt keyrings directory exists
       ansible.builtin.file:
         path: /etc/apt/keyrings
@@ -89,3 +108,71 @@
         name: docker
         enabled: true
         state: started
+        
+    - name: Ensure mount point exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+
+    - name: Check if backup_dir is mounted
+      command: mountpoint -q {{ backup_dir }}
+      register: mount_check
+      ignore_errors: true
+
+    - name: Mount NAS backup directory if not mounted
+      mount:
+        path: "{{ backup_dir }}"
+        src: "{{ nas_mount_src }}"
+        fstype: cifs
+        opts: "rw,vers=3,file_mode=0700,dir_mode=0777,username={{ user }},password={{ password }}"
+        state: mounted
+      when: mount_check.rc != 0
+
+    - name: Create docker root directory
+      ansible.builtin.file:
+        path: "{{ docker_root_dir }}"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: '0755'
+
+    - name: Create Portainer directory (optional for future use)
+      ansible.builtin.file:
+        path: "{{ portainer_dir }}"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: '0755'
+
+    - name: Create Portainer Agent docker-compose.yml in root docker directory
+      ansible.builtin.copy:
+        dest: "{{ docker_root_dir }}/docker-compose.yml"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: '0644'
+        content: |
+          services:
+            portainer_agent:
+              container_name: portainer_agent
+              image: portainer/agent:latest
+              security_opt:
+                - no-new-privileges:true
+              restart: unless-stopped
+              ports:
+                - 9001:9001
+              environment:
+                - TZ=America/New_York
+              volumes:
+                - /var/run/docker.sock:/var/run/docker.sock:ro
+                - /var/lib/docker/volumes:/var/lib/docker/volumes:rslave
+                - /:/host:rw
+
+    - name: Start Portainer Agent container
+      ansible.builtin.command: docker compose up -d
+      args:
+        chdir: "{{ docker_root_dir }}"
+      register: portainer_compose_up
+      changed_when: >
+        'Creating' in portainer_compose_up.stdout or
+        'Starting' in portainer_compose_up.stdout or
+        'Recreating' in portainer_compose_up.stdout
