@@ -1,14 +1,15 @@
 # ===============================================================================
 # 🧠 Goug's HomeLab Ansible Playbook
 # -------------------------------------------------------------------------------
-# 📦 Playbook Name  : Mount Docker Share
+# 📦 Playbook Name  : Mount Network Share
 # 🗓️ Run Schedule   : N/A
-# 🔧 Description    : Mounts Docker shares for backing up containers
+# 🔧 Description    : Mounts network shares from TrueNAS
 #
 # 🔐 Required Secure Variables (do NOT store in GitHub):
 #   - user            → The share username to use for connections
 #   - password        → The matching password or vault-encrypted secret
-#   - docker_share    → Docker share location to backup containers
+#   - soruce_share    → Network share location from TrueNAS
+#   - mount_dir       → Mount location on local drive
 #
 # ✅ These must be provided via Ansible Vault, Semaphore Secrets, or CI/CD env vars.
 # ❌ Never store actual values in this file or in version control.
@@ -18,7 +19,7 @@
 # ===============================================================================
 
 ---
-- name: Mount Docker Share
+- name: Mount Network Share
   hosts: all
   become: true
 
@@ -28,7 +29,8 @@
         that:
           - user is defined
           - password is defined
-          - docker_share is defined
+          - soruce_share is defined
+          - mount_dir is defined
         fail_msg: >
           One or more required secrets are missing.
           Please define them using Ansible Vault or in your CI/CD environment.
@@ -49,15 +51,15 @@
         path: "{{ docker_dir }}"
         state: directory
 
-    - name: Check if docker_dir is mounted
-      command: mountpoint -q {{ docker_dir }}
+    - name: Check if mount_dir is mounted
+      command: mountpoint -q {{ mount_dir }}
       register: mount_check
       ignore_errors: true
 
-    - name: Mount Docker Backup Share
+    - name: Mount Network Backup Share
       ansible.posix.mount:
-        src: "{{ docker_share }}"
-        path: "{{ docker_dir }}"
+        src: "{{ soruce_share }}"
+        path: "{{ mount_dir }}"
         opts: "rw,vers=3,file_mode=0777,dir_mode=0777,username={{ user }},password={{ password }}"
         fstype: cifs
         state: mounted
