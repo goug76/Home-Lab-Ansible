@@ -27,6 +27,7 @@
         pkg:
           - qemu-guest-agent
           - network-manager
+          - ubuntu-drivers-common
           - ca-certificates
           - python3-pip
           - acl
