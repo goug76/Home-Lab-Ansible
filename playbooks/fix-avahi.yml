@@ -1,0 +1,34 @@
+# ===============================================================================
+# 🧠 Goug's HomeLab Ansible Playbook
+# -------------------------------------------------------------------------------
+# 📦 Playbook Name  : Fix Avahi-Deamon
+# 🗓️ Run Schedule   : N/A
+# 🔧 Description    : Fixes the Avahi-Deamon that breaks Music Assitant after TrueNAS updates
+#
+# 🔐 Required Secure Variables (do NOT store in GitHub):
+#   - NONE
+#
+# ✅ These must be provided via Ansible Vault, Semaphore Variables/Secrets, or CI/CD env vars.
+# ❌ Never store actual values in this file or in version control.
+#
+# GitHub Repo  : https://github.com/goug76/Home-Lab-Ansible
+# Maintainer   : John Goughenour
+# ===============================================================================
+
+---
+- name: Ensure Avahi allows other mDNS stacks
+  hosts: truenas
+  become: true
+
+  tasks:
+    - name: Set Avahi disallow-other-stacks to no
+      ansible.builtin.lineinfile:
+        path: /etc/avahi/avahi-daemon.conf
+        regexp: '^#?\s*disallow-other-stacks='
+        line: 'disallow-other-stacks=no'
+        backup: true
+
+    - name: Restart Avahi
+      ansible.builtin.service:
+        name: avahi-daemon
+        state: restarted
