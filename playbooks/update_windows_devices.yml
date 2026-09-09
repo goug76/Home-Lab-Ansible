@@ -3,7 +3,7 @@
 # -------------------------------------------------------------------------------
 # 📦 Playbook Name  : Update Windows Devices
 # 🗓️ Run Schedule   : Every Tuesday at 10 PM
-# 🔧 Description    : Updates servers with the latest updates
+# 🔧 Description    : Installs Windows updates, handling required reboots safely.
 #
 # 🔐 Required Secure Variables (do NOT store in GitHub):
 #   - NONE
@@ -19,6 +19,9 @@
 - name: Weekly Windows Updates
   hosts: windows
   gather_facts: false
+
+  # Process one system at a time. This is slower, but prevents multiple Windows
+  # servers (especially domain controllers) from rebooting together.
   serial: 1
 
   vars:
@@ -29,62 +32,123 @@
       - Updates
       - DefinitionUpdates
 
+    windows_update_reboot_timeout: 3600
+    windows_update_settle_delay: 60
+    windows_update_log_directory: 'C:\ProgramData\Ansible\Logs'
+    windows_update_log_path: '{{ windows_update_log_directory }}\windows-updates.log'
+
   tasks:
+    - name: Check for a reboot left pending by an earlier operation
+      ansible.windows.win_powershell:
+        script: |
+          $rebootRegistryPaths = @(
+              'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
+              'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
+          )
+
+          $rebootPending = $rebootRegistryPaths.Where({ Test-Path -LiteralPath $_ }).Count -gt 0
+
+          # A non-zero UpdateExeVolatile value is another Windows Update reboot marker.
+          $updateExeVolatile = Get-ItemPropertyValue `
+              -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Updates' `
+              -Name 'UpdateExeVolatile' `
+              -ErrorAction SilentlyContinue
+
+          if ($null -ne $updateExeVolatile -and [int]$updateExeVolatile -ne 0) {
+              $rebootPending = $true
+          }
+
+          $Ansible.Result = $rebootPending
+          $Ansible.Changed = $false
+      register: pre_update_reboot_check
+
+    - name: Reboot before installing updates when required
+      ansible.windows.win_reboot:
+        msg: Ansible detected a pending reboot before Windows Update
+        reboot_timeout: '{{ windows_update_reboot_timeout }}'
+        post_reboot_delay: '{{ windows_update_settle_delay }}'
+      when: pre_update_reboot_check.result | default(false) | bool
+
+    - name: Ensure the Windows Update log directory exists
+      ansible.windows.win_file:
+        path: '{{ windows_update_log_directory }}'
+        state: directory
+
     - name: Search for available Windows updates
       ansible.windows.win_updates:
-        category_names: "{{ windows_update_categories }}"
+        category_names: '{{ windows_update_categories }}'
         state: searched
+        log_path: '{{ windows_update_log_path }}'
       register: update_search
 
-    - name: Show update search results
+    - name: Report updates found
       ansible.builtin.debug:
         msg:
-          - "Found updates: {{ update_search.found_update_count | default(0) }}"
-          - "Reboot required before install: {{ update_search.reboot_required | default(false) }}"
+          - 'Updates found: {{ update_search.found_update_count | default(0) }}'
+          - 'Reboot currently required: {{ update_search.reboot_required | default(false) }}'
+          - >-
+            Updates: {{ update_search.updates | default({}) | dict2items |
+            map(attribute='value.title') | list }}
 
-    - name: Show updates found
-      ansible.builtin.debug:
-        var: update_search.updates
+    # This second guard handles a reboot condition reported directly by Windows
+    # Update even when none of the common registry markers existed earlier.
+    - name: Reboot when the update search reports a pending reboot
+      ansible.windows.win_reboot:
+        msg: Windows Update requires a reboot before installation can continue
+        reboot_timeout: '{{ windows_update_reboot_timeout }}'
+        post_reboot_delay: '{{ windows_update_settle_delay }}'
+      when: update_search.reboot_required | default(false) | bool
 
-    - name: Install Windows updates
+    - name: Install Windows updates and reboot as many times as required
       ansible.windows.win_updates:
-        category_names: "{{ windows_update_categories }}"
+        category_names: '{{ windows_update_categories }}'
         state: installed
+        reboot: true
+        reboot_timeout: '{{ windows_update_reboot_timeout }}'
+        log_path: '{{ windows_update_log_path }}'
       register: update_install
 
-    - name: Run DISM component cleanup
-      ansible.windows.win_shell: |
-        DISM.exe /Online /Cleanup-Image /StartComponentCleanup /NoRestart
+    - name: Allow Windows services to settle after an update reboot
+      ansible.builtin.pause:
+        seconds: '{{ windows_update_settle_delay }}'
+      when: update_install.rebooted | default(false) | bool
+
+    - name: Report installation results
+      ansible.builtin.debug:
+        msg:
+          - 'Updates found: {{ update_install.found_update_count | default(0) }}'
+          - 'Updates installed: {{ update_install.installed_update_count | default(0) }}'
+          - 'Updates failed: {{ update_install.failed_update_count | default(0) }}'
+          - 'Reboot performed: {{ update_install.rebooted | default(false) }}'
+
+    - name: Run DISM component-store cleanup
+      ansible.windows.win_command:
+        argv:
+          - DISM.exe
+          - /Online
+          - /Cleanup-Image
+          - /StartComponentCleanup
+          - /NoRestart
+      register: dism_cleanup
       changed_when: false
 
-    - name: Check if reboot is required after updates
-      ansible.windows.win_shell: |
-        $paths = @(
-          'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending',
-          'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
-        )
+    - name: Search again to verify update status
+      ansible.windows.win_updates:
+        category_names: '{{ windows_update_categories }}'
+        state: searched
+        log_path: '{{ windows_update_log_path }}'
+      register: update_verify
 
-        $pending = $false
-        foreach ($path in $paths) {
-          if (Test-Path $path) {
-            $pending = $true
-          }
-        }
+    - name: Report final update status
+      ansible.builtin.debug:
+        msg:
+          - 'Updates still applicable: {{ update_verify.found_update_count | default(0) }}'
+          - 'Another reboot required: {{ update_verify.reboot_required | default(false) }}'
+          - 'Detailed log: {{ windows_update_log_path }}'
 
-        if ($pending) {
-          Write-Output "true"
-        }
-        else {
-          Write-Output "false"
-        }
-      register: reboot_pending_check
-      changed_when: false
-
-    - name: Reboot if required
+    - name: Reboot if cleanup or final verification requires it
       ansible.windows.win_reboot:
-        msg: "Reboot initiated by Ansible after Windows Updates"
-        post_reboot_delay: 60
-        reboot_timeout: 3600
-      when:
-        - update_install.reboot_required | default(false)
-          or reboot_pending_check.stdout_lines[0] | trim == 'true'
+        msg: Final reboot initiated by Ansible after Windows maintenance
+        reboot_timeout: '{{ windows_update_reboot_timeout }}'
+        post_reboot_delay: '{{ windows_update_settle_delay }}'
+      when: update_verify.reboot_required | default(false) | bool
