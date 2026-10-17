@@ -66,10 +66,39 @@
       shell: docker stop $(docker ps -q)
       ignore_errors: yes
 
+    - name: Count unused Docker images
+      ansible.builtin.shell: |
+        set -o pipefail
+
+        all_images="$(docker image ls --quiet --no-trunc | sort -u)"
+        containers="$(docker ps --all --quiet)"
+        used_images=""
+
+        if [ -n "$containers" ]; then
+          used_images="$(
+            docker inspect $containers |
+            python3 -c 'import json, sys; print("\n".join(c["Image"] for c in json.load(sys.stdin)))' |
+            sort -u
+          )"
+        fi
+
+        comm -23 \
+          <(printf '%s\n' "$all_images" | sed '/^$/d') \
+          <(printf '%s\n' "$used_images" | sed '/^$/d') |
+          wc -l
+      args:
+        executable: /bin/bash
+      register: unused_image_count
+      changed_when: false
+
+    - name: Report number of images to prune
+      ansible.builtin.debug:
+        msg: "Docker will prune {{ unused_image_count.stdout | trim }} unused image(s)."
+
     - name: Prune unused Docker images
-      command: docker image prune -af
+      ansible.builtin.command: docker image prune -af
       register: prune_result
-      changed_when: prune_result.rc == 0
+      changed_when: (unused_image_count.stdout | int) > 0
 
     - name: Find old query log files
       find:
