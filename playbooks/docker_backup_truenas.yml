@@ -26,7 +26,7 @@
         timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | regex_replace(':', '') }}"
         hostname: "{{ ansible_hostname | lower }}"
       tasks:
-        - name: Count unused Docker images
+    - name: Count unused Docker images
       ansible.builtin.shell: |
         set -o pipefail
 
