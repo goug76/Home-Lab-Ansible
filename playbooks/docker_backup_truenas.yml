@@ -26,75 +26,75 @@
         timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | regex_replace(':', '') }}"
         hostname: "{{ ansible_hostname | lower }}"
       tasks:
-    - name: Count unused Docker images
-      ansible.builtin.shell: |
-        set -o pipefail
+        - name: Count unused Docker images
+          ansible.builtin.shell: |
+            set -o pipefail
 
-        all_images="$(docker image ls --quiet --no-trunc | sort -u)"
-        containers="$(docker ps --all --quiet)"
-        used_images=""
+            all_images="$(docker image ls --quiet --no-trunc | sort -u)"
+            containers="$(docker ps --all --quiet)"
+            used_images=""
 
-        if [ -n "$containers" ]; then
-          used_images="$(
-            docker inspect $containers |
-            python3 -c 'import json, sys; print("\n".join(c["Image"] for c in json.load(sys.stdin)))' |
-            sort -u
-          )"
-        fi
+            if [ -n "$containers" ]; then
+              used_images="$(
+                docker inspect $containers |
+                python3 -c 'import json, sys; print("\n".join(c["Image"] for c in json.load(sys.stdin)))' |
+                sort -u
+              )"
+            fi
 
-        comm -23 \
-          <(printf '%s\n' "$all_images" | sed '/^$/d') \
-          <(printf '%s\n' "$used_images" | sed '/^$/d') |
-          wc -l
-      args:
-        executable: /bin/bash
-      register: unused_image_count
-      changed_when: false
+            comm -23 \
+              <(printf '%s\n' "$all_images" | sed '/^$/d') \
+              <(printf '%s\n' "$used_images" | sed '/^$/d') |
+              wc -l
+          args:
+            executable: /bin/bash
+          register: unused_image_count
+          changed_when: false
 
-    - name: Report number of images to prune
-      ansible.builtin.debug:
-        msg: "Docker will prune {{ unused_image_count.stdout | trim }} unused image(s)."
+        - name: Report number of images to prune
+          ansible.builtin.debug:
+            msg: "Docker will prune {{ unused_image_count.stdout | trim }} unused image(s)."
 
-    - name: Prune unused Docker images
-      ansible.builtin.command: docker image prune -af
-      register: prune_result
-      changed_when: (unused_image_count.stdout | int) > 0
+        - name: Prune unused Docker images
+          ansible.builtin.command: docker image prune -af
+          register: prune_result
+          changed_when: (unused_image_count.stdout | int) > 0
 
-    - name: Stop all Docker containers
-      shell: docker stop $(docker ps -q)
-      ignore_errors: yes
+        - name: Stop all Docker containers
+          shell: docker stop $(docker ps -q)
+          ignore_errors: yes
 
-    - name: Create backup archive
-      archive:
-        path: "{{ docker_dir }}"
-        dest: "{{ backup_dir }}/docker_backup_{{ hostname }}_{{ timestamp }}.zip"
-        format: zip
+        - name: Create backup archive
+          archive:
+            path: "{{ docker_dir }}"
+            dest: "{{ backup_dir }}/docker_backup_{{ hostname }}_{{ timestamp }}.zip"
+            format: zip
 
-    - name: Start all Docker containers
-      shell: docker start $(docker ps -a -q)
-      ignore_errors: yes
+        - name: Start all Docker containers
+          shell: docker start $(docker ps -a -q)
+          ignore_errors: yes
 
-    - name: Find all backup files for this host
-      find:
-        paths: "{{ backup_dir }}"
-        patterns: "docker_backup_{{ hostname }}_*.zip"
-        recurse: no
-        file_type: file
-      register: all_backups
+        - name: Find all backup files for this host
+          find:
+            paths: "{{ backup_dir }}"
+            patterns: "docker_backup_{{ hostname }}_*.zip"
+            recurse: no
+            file_type: file
+          register: all_backups
 
-    - name: Sort backups by mtime (modification time)
-      set_fact:
-        sorted_backups: "{{ all_backups.files | sort(attribute='mtime', reverse=true) }}"
+        - name: Sort backups by mtime (modification time)
+          set_fact:
+            sorted_backups: "{{ all_backups.files | sort(attribute='mtime', reverse=true) }}"
 
-    - name: Debug found backup files (optional)
-      debug:
-        msg: "{{ item.path }}"
-      loop: "{{ sorted_backups }}"
-      when: sorted_backups | length > 3
+        - name: Debug found backup files (optional)
+          debug:
+            msg: "{{ item.path }}"
+          loop: "{{ sorted_backups }}"
+          when: sorted_backups | length > 3
 
-    - name: Remove older backups, keeping only the 3 most recent
-      file:
-        path: "{{ item.path }}"
-        state: absent
-      loop: "{{ sorted_backups[3:] }}"
-      when: sorted_backups | length > 3
+        - name: Remove older backups, keeping only the 3 most recent
+          file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ sorted_backups[3:] }}"
+          when: sorted_backups | length > 3
